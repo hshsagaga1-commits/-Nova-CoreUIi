@@ -1,8 +1,12 @@
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
-local SCALE = 0.50
+local SCALE_STEP = tonumber(getgenv().CoreUIScaleStep) or 0.50
 local TAG = "__JoaoCoreUIScale"
+
+if SCALE_STEP <= 0 then
+    SCALE_STEP = 0.50
+end
 
 if getgenv().__JoaoCoreUIFix then
     pcall(function()
@@ -19,16 +23,12 @@ local function find(root, name)
         return root
     end
 
-    local direct =
-        root:FindFirstChild(name)
-
+    local direct = root:FindFirstChild(name)
     if direct then
         return direct
     end
 
-    for _, v in ipairs(
-        root:GetDescendants()
-    ) do
+    for _, v in ipairs(root:GetDescendants()) do
         if v.Name == name then
             return v
         end
@@ -38,165 +38,88 @@ local function find(root, name)
 end
 
 local function scale(gui)
-    if not gui
-        or not gui:IsA("GuiObject")
-    then
+    if not gui or not gui:IsA("GuiObject") then
         return
     end
 
     gui.ClipsDescendants = false
 
-    local uiScale =
-        gui:FindFirstChild(TAG)
+    local uiScale = gui:FindFirstChild(TAG)
 
-    if not uiScale then
-        uiScale =
-            Instance.new("UIScale")
-
-        uiScale.Name =
-            TAG
-
-        uiScale.Parent =
-            gui
+    if uiScale and uiScale:IsA("UIScale") then
+        uiScale.Scale = uiScale.Scale * SCALE_STEP
+    else
+        uiScale = Instance.new("UIScale")
+        uiScale.Name = TAG
+        uiScale.Scale = SCALE_STEP
+        uiScale.Parent = gui
     end
-
-    uiScale.Scale =
-        SCALE
 end
 
 local topbarContainer
 
 repeat
-    topbarContainer =
-        CoreGui:FindFirstChild(
-            "TopBarApp"
-        )
-
+    topbarContainer = CoreGui:FindFirstChild("TopBarApp")
     task.wait()
 until topbarContainer
 
-local topbar =
-    topbarContainer:
-        FindFirstChild(
-            "TopBarApp"
-        )
-    or topbarContainer
+local topbar = topbarContainer:FindFirstChild("TopBarApp") or topbarContainer
 
-local menuHolder =
-    find(
-        topbar,
-        "MenuIconHolder"
-    )
+local menuHolder = find(topbar, "MenuIconHolder")
+local unibarLeft = find(topbar, "UnibarLeftFrame")
+local unibarMenu = find(topbar, "UnibarMenu")
 
-local unibarLeft =
-    find(
-        topbar,
-        "UnibarLeftFrame"
-    )
-
-local unibarMenu =
-    find(
-        topbar,
-        "UnibarMenu"
-    )
-
-if not menuHolder
-    or not unibarLeft
-    or not unibarMenu
-then
-    error(
-        "CoreUI nao encontrada"
-    )
+if not menuHolder or not unibarLeft or not unibarMenu then
+    error("CoreUI nao encontrada")
 end
 
-menuHolder.ClipsDescendants =
-    false
+menuHolder.ClipsDescendants = false
+unibarLeft.ClipsDescendants = false
+unibarMenu.ClipsDescendants = false
 
-unibarLeft.ClipsDescendants =
-    false
+local trigger = find(menuHolder, "TriggerPoint")
 
-unibarMenu.ClipsDescendants =
-    false
-
-local trigger =
-    find(
-        menuHolder,
-        "TriggerPoint"
-    )
-
-if trigger
-    and trigger:IsA("GuiObject")
-then
-    trigger.ClipsDescendants =
-        false
+if trigger and trigger:IsA("GuiObject") then
+    trigger.ClipsDescendants = false
 end
 
 local robloxButton
 
 if trigger then
-    robloxButton =
-        find(
-            trigger,
-            "IconHitArea"
-        )
-        or find(
-            trigger,
-            "Background"
-        )
+    robloxButton = find(trigger, "IconHitArea")
+        or find(trigger, "Background")
         or trigger
 else
-    robloxButton =
-        menuHolder
+    robloxButton = menuHolder
 end
 
-if robloxButton:IsA(
-    "GuiObject"
-) then
-    robloxButton.ClipsDescendants =
-        false
+if robloxButton:IsA("GuiObject") then
+    robloxButton.ClipsDescendants = false
 end
 
 RunService.RenderStepped:Wait()
 RunService.RenderStepped:Wait()
 
-local originalButtonX =
-    robloxButton.AbsolutePosition.X
+-- These measurements are taken BEFORE this execution's scale step.
+-- That makes every execution compound from the current visual size.
+local originalButtonX = robloxButton.AbsolutePosition.X
+local originalButtonWidth = robloxButton.AbsoluteSize.X
+local originalUnibarX = unibarMenu.AbsolutePosition.X
 
-local originalButtonWidth =
-    robloxButton.AbsoluteSize.X
-
-local originalUnibarX =
-    unibarMenu.AbsolutePosition.X
-
-local originalGap =
-    originalUnibarX
-    - (
-        originalButtonX
-        + originalButtonWidth
-    )
-
+local originalGap = originalUnibarX - (originalButtonX + originalButtonWidth)
 if originalGap < 0 then
     originalGap = 0
 end
 
-local originalLeftPosition =
-    unibarLeft.Position
+local originalLeftPosition = unibarLeft.Position
 
 scale(menuHolder)
 scale(unibarMenu)
 
-local chat =
-    CoreGui:FindFirstChild(
-        "ExperienceChat"
-    )
+local chat = CoreGui:FindFirstChild("ExperienceChat")
 
 if chat then
-    local appLayout =
-        find(
-            chat,
-            "appLayout"
-        )
-
+    local appLayout = find(chat, "appLayout")
     if appLayout then
         scale(appLayout)
     end
@@ -206,53 +129,26 @@ RunService.RenderStepped:Wait()
 RunService.RenderStepped:Wait()
 RunService.RenderStepped:Wait()
 
-local desiredButtonWidth =
-    originalButtonWidth
-    * SCALE
+local desiredButtonWidth = originalButtonWidth * SCALE_STEP
+local desiredGap = originalGap * SCALE_STEP
+local desiredUnibarX = originalButtonX + desiredButtonWidth + desiredGap
+local currentUnibarX = unibarMenu.AbsolutePosition.X
+local moveX = desiredUnibarX - currentUnibarX
 
-local desiredGap =
-    originalGap
-    * SCALE
+local targetPosition = UDim2.new(
+    originalLeftPosition.X.Scale,
+    originalLeftPosition.X.Offset + moveX,
+    originalLeftPosition.Y.Scale,
+    originalLeftPosition.Y.Offset
+)
 
-local desiredUnibarX =
-    originalButtonX
-    + desiredButtonWidth
-    + desiredGap
+unibarLeft.Position = targetPosition
 
-local currentUnibarX =
-    unibarMenu.AbsolutePosition.X
-
-local moveX =
-    desiredUnibarX
-    - currentUnibarX
-
-local targetPosition =
-    UDim2.new(
-        originalLeftPosition.X.Scale,
-        originalLeftPosition.X.Offset
-            + moveX,
-        originalLeftPosition.Y.Scale,
-        originalLeftPosition.Y.Offset
-    )
-
-unibarLeft.Position =
-    targetPosition
-
-local stackedElements =
-    find(
-        topbar,
-        "StackedElements"
-    )
+local stackedElements = find(topbar, "StackedElements")
 
 local function hideShopBag()
-    if not stackedElements
-        or not stackedElements.Parent
-    then
-        stackedElements =
-            find(
-                topbar,
-                "StackedElements"
-            )
+    if not stackedElements or not stackedElements.Parent then
+        stackedElements = find(topbar, "StackedElements")
     end
 
     if not stackedElements then
@@ -261,12 +157,8 @@ local function hideShopBag()
 
     local found = false
 
-    for _, v in ipairs(
-        stackedElements:GetChildren()
-    ) do
-        if v:IsA("GuiObject")
-            and v.LayoutOrder == 1
-        then
+    for _, v in ipairs(stackedElements:GetChildren()) do
+        if v:IsA("GuiObject") and v.LayoutOrder == 1 then
             v.Visible = false
             found = true
         end
@@ -276,53 +168,24 @@ local function hideShopBag()
         return
     end
 
-    for _, v in ipairs(
-        stackedElements:
-            GetDescendants()
-    ) do
-        local name =
-            string.lower(
-                v.Name
-            )
+    for _, v in ipairs(stackedElements:GetDescendants()) do
+        local name = string.lower(v.Name)
 
-        if string.find(
-            name,
-            "shop",
-            1,
-            true
-        )
-            or string.find(
-                name,
-                "store",
-                1,
-                true
-            )
-            or string.find(
-                name,
-                "offer",
-                1,
-                true
-            )
+        if string.find(name, "shop", 1, true)
+            or string.find(name, "store", 1, true)
+            or string.find(name, "offer", 1, true)
         then
-            local current =
-                v
+            local current = v
 
             while current
                 and current.Parent
-                and current.Parent
-                    ~= stackedElements
+                and current.Parent ~= stackedElements
             do
-                current =
-                    current.Parent
+                current = current.Parent
             end
 
-            if current
-                and current:IsA(
-                    "GuiObject"
-                )
-            then
-                current.Visible =
-                    false
+            if current and current:IsA("GuiObject") then
+                current.Visible = false
             end
         end
     end
@@ -330,16 +193,10 @@ end
 
 hideShopBag()
 
-getgenv().__JoaoCoreUIFix =
-    RunService.RenderStepped:
-    Connect(function()
+getgenv().__JoaoCoreUIFix = RunService.RenderStepped:Connect(function()
+    if unibarLeft and unibarLeft.Parent then
+        unibarLeft.Position = targetPosition
+    end
 
-        if unibarLeft
-            and unibarLeft.Parent
-        then
-            unibarLeft.Position =
-                targetPosition
-        end
-
-        hideShopBag()
-    end)
+    hideShopBag()
+end)
