@@ -1,11 +1,11 @@
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
-local SCALE_STEP = tonumber(getgenv().CoreUIScaleStep) or 0.50
+local SCALE_STEP = tonumber(getgenv().CoreUIScaleStep) or 0.65
 local TAG = "__JoaoCoreUIScale"
 
 if SCALE_STEP <= 0 then
-    SCALE_STEP = 0.50
+    SCALE_STEP = 0.65
 end
 
 if getgenv().__JoaoCoreUIFix then
